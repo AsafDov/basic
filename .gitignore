@@ -1,0 +1,5 @@
+.gitignore
+sdkconfig
+dependencies.lock
+sdkconfig.ci.history
+sdkconfig.ci.nohistory
