@@ -1,11 +1,11 @@
-/* Basic console example (esp_console_repl API)
-
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
+/**
+ * This is a code to demonstrate the use of queues to interact with a shared resource between tasks.
+ * The code produces an interactive console that controls the LED blink delay
+ * By typing `delay <time in miliseconds>` i can set the delay variable in a thread safe manner.
+ * 
+ * For the console I used the shown usage basic example in the ESP IDF documentation
+ * 
+ */
 
 #include <stdio.h>
 #include <string.h>
@@ -22,7 +22,6 @@
 
 
 // Global Variables
-static int delay = 1000;
 static bool led_state=1;
 static QueueHandle_t queue_handle;
 
@@ -74,23 +73,6 @@ static void initialize_nvs(void)
     ESP_ERROR_CHECK(err);
 }
 
-static int serial_send_command(int argc, char** argv)
-{
-    // Check if the command has an argument
-    if (argc != 2) {
-        printf("Usage: send <text to send>\n");
-        return ESP_ERR_INVALID_ARG;
-    }
-    // Get the text from the command line argument
-    // Loop through each argument from the command line
-    for (int i = 1; i < argc; i++) {
-        // Print each argument, which is a separate string in the array
-        printf("%s",argv[i]);
-    }
-    printf("\n");
-
-    return ESP_OK;
-}
 static int delay_command(int argc, char** argv)
 {
     // Check if the command has an argument
@@ -134,6 +116,7 @@ void app_main(void)
         1        
     );
 
+    /* Config and Initialization of Console Task */
     esp_console_repl_t *repl = NULL;
     esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
     /* Prompt to be printed before each line.
