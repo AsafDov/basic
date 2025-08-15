@@ -1,156 +1,82 @@
-| Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C5 | ESP32-C6 | ESP32-C61 | ESP32-H2 | ESP32-H21 | ESP32-H4 | ESP32-P4 | ESP32-S2 | ESP32-S3 |
-| ----------------- | ----- | -------- | -------- | -------- | -------- | --------- | -------- | --------- | -------- | -------- | -------- | -------- |
+# 💡 ESP-IDF Console-Controlled LED Blinker
 
-# Basic Console Example (`esp_console_repl`)
+This project is a simple yet powerful demonstration of **real-time operating system (RTOS)** concepts using the **ESP-IDF framework** and a FreeRTOS-based application. It implements an interactive command-line interface (CLI) over a serial port, allowing a user to dynamically control the blink rate of an on-board LED.
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+The core of this application highlights **thread-safe communication** between two FreeRTOS tasks by using a **FreeRTOS queue**, which is a fundamental concept for reliable shared resource management in embedded systems.
 
-This example illustrates the usage of the REPL (Read-Eval-Print Loop) APIs of the [Console Component](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/console.html#console) to create an interactive shell on the ESP chip. The interactive shell running on the ESP chip can then be controlled/interacted with over a serial interface. This example supports UART and USB interfaces.
+***
 
-The interactive shell implemented in this example contains a wide variety of commands, and can act as a basis for applications that require a command-line interface (CLI).
+### ✨ Features
 
-Compared to the [advanced console example](../advanced), this example requires less code to initialize and run the console. `esp_console_repl` API handles most of the details. If you'd like to customize the way console works (for example, process console commands in an existing task), please check the advanced console example.
+* **Interactive Serial Console:** A robust and responsive command-line interface built with the ESP-IDF REPL (Read-Eval-Print Loop) component.
+* **Dynamic Control:** Change the LED blink delay in real-time by entering a simple command.
+* **FreeRTOS Multithreading:** Utilizes two separate FreeRTOS tasks (`blink_task` and the console's REPL task) that run concurrently.
+* **Thread-Safe Communication:** A FreeRTOS queue is used to safely pass new delay values from the console task to the blink task, preventing race conditions.
 
-## How to use example
+***
 
-This example can be used on boards with UART and USB interfaces. The sections below explain how to set up the board and configure the example.
+### ⚙️ How It Works (Core Concepts)
 
-### Using with UART
+This application is built around two primary FreeRTOS tasks and a queue that connects them.
 
-When UART interface is used, this example should run on any commonly available Espressif development board. UART interface is enabled by default (`CONFIG_ESP_CONSOLE_UART_DEFAULT` option in menuconfig). No extra configuration is required.
+#### The `blink_task`
 
-### Using with USB_SERIAL_JTAG
+This is a dedicated task responsible for blinking the LED. It enters an infinite loop, where it reads a new delay value from a FreeRTOS queue. If a new value is present, it updates its internal delay variable. If the queue is empty, it continues using the most recent value. After updating, it toggles the LED's state and uses `vTaskDelay()` to pause for the specified amount of time.
 
-*NOTE: We recommend to disable the secondary console output on chips with USB_SERIAL_JTAG since the secondary serial is output-only and would not be very useful when using a console application. This is why the secondary console output is deactivated per default (CONFIG_ESP_CONSOLE_SECONDARY_NONE=y)*
+#### The `delay_command`
 
-On chips with USB_SERIAL_JTAG peripheral, console example can be used over the USB serial port.
+This function is registered as a custom command with the ESP-IDF console. When a user types `delay <value>` in the serial monitor, this function is executed. It parses the integer value from the command line, and then, crucially, it **sends this integer value to the queue** using `xQueueSend()`.
 
-* First, connect the USB cable to the USB_SERIAL_JTAG interface.
-* Second, run `idf.py menuconfig` and enable `CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG` option.
+#### The FreeRTOS Queue
 
-For more details about connecting and configuring USB_SERIAL_JTAG (including pin numbers), see the IDF Programming Guide:
-* [ESP32-C3 USB_SERIAL_JTAG](https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/usb-serial-jtag-console.html)
-* [ESP32-S3 USB_SERIAL_JTAG](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-guides/usb-serial-jtag-console.html)
+The queue (`queue_handle`) serves as the central point of **thread-safe communication**. It is initialized in `app_main()` and has a defined size and item size (`sizeof(int)`). It acts as a buffer that decouples the two tasks. The `delay_command` (on the console's task) writes to the queue, while the `blink_task` reads from it. This ensures that data is passed safely and predictably between the two tasks without the risk of one task overwriting data while the other is using it.
 
-### Using with USB CDC (USB_OTG peripheral)
+***
 
-USB_OTG peripheral can also provide a USB serial port which works with this example.
+### 🛠️ Prerequisites
 
-* First, connect the USB cable to the USB_OTG peripheral interface.
-* Second, run `idf.py menuconfig` and enable `CONFIG_ESP_CONSOLE_USB_CDC` option.
+* **ESP-IDF v5.0 or later:** The official Espressif IoT Development Framework.
+* **Supported ESP32 Board:** A development board with an on-board LED (GPIO 2 in this example).
+* **Standard C/C++ Build Tools:** A common toolchain for embedded development.
 
-For more details about connecting and configuring USB_OTG (including pin numbers), see the IDF Programming Guide:
-* [ESP32-S2 USB_OTG](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s2/api-guides/usb-otg-console.html)
-* [ESP32-S3 USB_OTG](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-guides/usb-otg-console.html)
+***
 
-### Other configuration options
+### ⬇️ Building and Flashing
 
-This example has an option to store the command history in Flash. This option is enabled by default.
+1.  Clone the repository:
+    ```sh
+    git clone [repository-url]
+    cd [repository-name]
+    ```
+2.  Set the target chip:
+    ```sh
+    idf.py set-target esp32
+    ```
+3.  Build the project:
+    ```sh
+    idf.py build
+    ```
+4.  Flash the project to your board and monitor the serial output:
+    ```sh
+    idf.py -p <PORT> flash monitor
+    ```
+    (Replace `<PORT>` with your board's serial port, e.g., `/dev/ttyUSB0` or `COM3`).
 
-To disable this, run `idf.py menuconfig` and disable `CONFIG_CONSOLE_STORE_HISTORY` option.
+***
 
-### Build and Flash
+### ⌨️ Usage
 
-Build the project and flash it to the board, then run monitor tool to view serial output:
+Once the application is running, open the serial monitor and you will see the console prompt.
 
-```
-idf.py -p PORT flash monitor
-```
-
-(Replace PORT with the name of the serial port to use.)
-
-(To exit the serial monitor, type ``Ctrl-]``.)
-
-See the Getting Started Guide for full steps to configure and use ESP-IDF to build projects.
-
-## Example Output
-
-Enter the `help` command get a full list of all available commands. The following is a sample session of the Console Example where a variety of commands provided by the Console Example are used.
-
-On ESP32, GPIO15 may be connected to GND to remove the boot log output.
-
-```
-This is an example of ESP-IDF console component.
-Type 'help' to get the list of commands.
-Use UP/DOWN arrows to navigate through command history.
-Press TAB when typing command name to auto-complete.
-[esp32]> help
-help
-  Print the list of registered commands
-
-free
-  Get the total size of heap memory available
-
-restart
-  Restart the program
-
-deep_sleep  [-t <t>] [--io=<n>] [--io_level=<0|1>]
-  Enter deep sleep mode. Two wakeup modes are supported: timer and GPIO. If no
-  wakeup option is specified, will sleep indefinitely.
-  -t, --time=<t>  Wake up time, ms
-      --io=<n>  If specified, wakeup using GPIO with given number
-  --io_level=<0|1>  GPIO level to trigger wakeup
-
-join  [--timeout=<t>] <ssid> [<pass>]
-  Join WiFi AP as a station
-  --timeout=<t>  Connection timeout, ms
-        <ssid>  SSID of AP
-        <pass>  PSK of AP
-
-[esp32]> free
-257200
-[esp32]> deep_sleep -t 1000
-I (146929) deep_sleep: Enabling timer wakeup, timeout=1000000us
-I (619) heap_init: Initializing. RAM available for dynamic allocation:
-I (620) heap_init: At 3FFAE2A0 len 00001D60 (7 KiB): DRAM
-I (626) heap_init: At 3FFB7EA0 len 00028160 (160 KiB): DRAM
-I (645) heap_init: At 3FFE0440 len 00003BC0 (14 KiB): D/IRAM
-I (664) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
-I (684) heap_init: At 40093EA8 len 0000C158 (48 KiB): IRAM
-
-This is an example of ESP-IDF console component.
-Type 'help' to get the list of commands.
-Use UP/DOWN arrows to navigate through command history.
-Press TAB when typing command name to auto-complete.
-[esp32]> join --timeout 10000 test_ap test_password
-I (182639) connect: Connecting to 'test_ap'
-I (184619) connect: Connected
-[esp32]> free
-212328
-[esp32]> restart
-I (205639) restart: Restarting
-I (616) heap_init: Initializing. RAM available for dynamic allocation:
-I (617) heap_init: At 3FFAE2A0 len 00001D60 (7 KiB): DRAM
-I (623) heap_init: At 3FFB7EA0 len 00028160 (160 KiB): DRAM
-I (642) heap_init: At 3FFE0440 len 00003BC0 (14 KiB): D/IRAM
-I (661) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
-I (681) heap_init: At 40093EA8 len 0000C158 (48 KiB): IRAM
-
-This is an example of ESP-IDF console component.
-Type 'help' to get the list of commands.
-Use UP/DOWN arrows to navigate through command history.
-Press TAB when typing command name to auto-complete.
-[esp32]>
-
-```
-
-## Troubleshooting
-
-### Line Endings
-
-The line endings in the Console Example are configured to match particular serial monitors. Therefore, if the following log output appears, consider using a different serial monitor (e.g. Putty for Windows) or modify the example's [UART configuration](#Configuring-UART-and-VFS).
-
-```
-This is an example of ESP-IDF console component.
-Type 'help' to get the list of commands.
-Use UP/DOWN arrows to navigate through command history.
-Press TAB when typing command name to auto-complete.
-Your terminal application does not support escape sequences.
-Line editing and history features are disabled.
-On Windows, try using Windows Terminal or Putty instead.
-esp32>
-```
-
-### Escape Sequences on Windows 10
-
-When using the default command line or PowerShell on Windows 10, you may see a message indicating that the console does not support escape sequences, as shown in the above output. To avoid such issues, it is recommended to run the serial monitor under [Windows Terminal](https://en.wikipedia.org/wiki/Windows_Terminal), which supports all required escape sequences for the app, unlike the default terminal. The main escape sequence of concern is the Device Status Report (`0x1b[5n`), which is used to check terminal capabilities. Any response to this sequence indicates support. This should not be an issue on Windows 11, where Windows Terminal is the default.
+* To set the LED blink delay, type:
+    ```sh
+    delay <milliseconds>
+    ```
+    For example, to set the delay to 500 milliseconds (0.5 seconds), enter:
+    ```sh
+    delay 500
+    ```
+* To see a list of available commands, type:
+    ```sh
+    help
+    ```
