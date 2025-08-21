@@ -45,8 +45,8 @@ The queue (`queue_handle`) serves as the central point of **thread-safe communic
 
 1.  Clone the repository:
     ```sh
-    git clone [repository-url]
-    cd [repository-name]
+    git clone https://github.com/AsafDov/ESP_IDF_Console_Controlled_LED_Blinker
+    cd ESP_IDF_Console_Controlled_LED_Blinker
     ```
 2.  Set the target chip:
     ```sh
